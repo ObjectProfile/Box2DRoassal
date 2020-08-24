@@ -48,7 +48,7 @@ RSBox2DLayoutExamples >> example2 [
 
 	edges := RSEdgeBuilder line
 		canvas: c;
-		color: Color blue;
+		color: Color blue translucent;
 		connectFrom: [ :v | v // 2 ].
 	
 	layout := RSBox2DLayout new.
@@ -57,12 +57,24 @@ RSBox2DLayoutExamples >> example2 [
 		edges: edges;
 		start.
 	
-	c newAnimation repeat onStepDo: [ :t |
+"	c newAnimation repeat onStepDo: [ :t |
 		layout step.
 		c zoomToFit ].
+"
+
+	c newAnimation 
+		duration: 4 seconds;
+		from: layout deltaTime;
+		to: Float epsilon;
+		easing: RSEasing expIn;
+		onStepDo: [ :t |
+			layout deltaTime: t; step.
+			c zoomToFit ].
+
 
 	c nodes @ RSHighlightable defaultRed.
-	^ c
+	
+		^ c
 ]
 
 { #category : #examples }
@@ -75,7 +87,7 @@ RSBox2DLayoutExamples >> example3 [
 	builder := RSUMLClassBuilder new.
 	builder container: c.
 	builder classes: RSEvent withAllSubclasses.
-"	builder layout grid."
+	builder layout grid gapSize: -1.
 	builder build.
 	builder canvas edges copy do: #remove.
 
@@ -84,14 +96,16 @@ RSBox2DLayoutExamples >> example3 [
 		color: (Color blue alpha: 0.2);
 		connectFrom: #superclass.
 
-	self flag: #todo. "Why is this necessary?"
-	c nodes do: [ :each | each position: 0 asPoint  ].
+
 
 	layout := RSBox2DLayout new.
 	layout
 		nodes: c nodes;
 		edges: edges;
 		start.
+
+	c shapes do: [ :each | 
+		each when: RSMouseClick send: #inspect to: (each propertyAt: #box2dBodyKey) ].
 	
 	c newAnimation repeat onStepDo: [ :t |
 		layout step.
@@ -140,4 +154,141 @@ RSBox2DLayoutExamples >> example4 [
 		c zoomToFit ].
 
 	^ c
+]
+
+{ #category : #examples }
+RSBox2DLayoutExamples >> example4b [
+	<script: 'self new example4b open'>
+	| c edges layout maxMethodSize sizeScale colorPalette highlight |
+	c := RSCanvas new.
+	
+	maxMethodSize := Collection withAllSubclasses max: [ :each | each methods size ].
+	sizeScale := NSScale linear domain: { 0. maxMethodSize }; range: { 1.0. 15 }; yourself.
+	colorPalette := RSColorPalette qualitative dark28.
+	highlight := RSHighlightable defaultRed.
+	
+	c addAll: (Collection withAllSubclasses collect: [:aClass |
+		|label|
+		label := RSLabel new
+			text: aClass name;
+			color: (colorPalette scale: aClass category);
+			yourself.
+		label scaleBy: (sizeScale scale: aClass methods size).
+		({ label } asGroup asShapeFor: aClass)
+			padding: 10;
+			addInteraction: highlight;
+			when: RSMouseClick send: #browse to: aClass;
+			yourself ]).
+
+	edges := RSEdgeBuilder line
+		canvas: c;
+		color: Color transparent;
+		connectFrom: #superclass.
+	
+	layout := RSBox2DLayout new.
+	layout
+		nodes: c nodes;
+		edges: edges;
+		start.
+	
+	c newAnimation 
+		duration: 4 seconds;
+		from: layout deltaTime;
+		to: Float epsilon;
+		easing: RSEasing expIn;
+		onStepDo: [ :t |
+			layout deltaTime: t; step.
+			c zoomToFit ].
+
+	^ c
+]
+
+{ #category : #examples }
+RSBox2DLayoutExamples >> example4c [
+	<script: 'self new example4c open'>
+
+	| c edges layout maxMethodSize sizeScale colorPalette highlight |
+	c := RSCanvas new.
+	layout := RSBox2DLayout new.
+	
+	maxMethodSize := Collection withAllSubclasses max: [ :each | each methods size ].
+	sizeScale := NSScale linear domain: { 0. maxMethodSize }; range: { 1.0. 15 }; yourself.
+	colorPalette := RSColorPalette qualitative dark28.
+	highlight := RSHighlightable defaultRed.
+	
+	c addAll: (Collection withAllSubclasses collect: [:aClass |
+		|label|
+		label := RSLabel new
+			text: aClass name;
+			color: (colorPalette scale: aClass category);
+			yourself.
+		label scaleBy: (sizeScale scale: aClass methods size).
+		({ label } asGroup asShapeFor: aClass)
+			padding: 10;
+			addInteraction: highlight;
+			draggable;
+			when: RSMouseDragStart do: [ :event | layout fix: event shape ];
+			when: RSMouseDragEnd do: [ :event | layout unfix: event shape ];
+			when: RSMouseDragging do: [ :event |
+				(event shape propertyAt: #box2dBodyKey) position: event position ];
+			when: RSMouseClick send: #browse to: aClass;
+			yourself ]).
+
+	edges := RSEdgeBuilder line
+		canvas: c;
+		color: Color transparent;
+		connectFrom: #superclass.
+	
+	layout
+		nodes: c nodes;
+		edges: edges;
+		start.
+	
+	c newAnimation repeat onStepDo: [ :t | layout step].
+
+	c addInteraction: RSCanvasController.
+
+	^ c
+]
+
+{ #category : #examples }
+RSBox2DLayoutExamples >> example5 [
+	<script: 'self new example5 open'>
+	| c layout |
+	c := RSCanvas new.
+	
+	c add: (
+		RSLabel new
+			model: 1;
+			text: 1 asString;
+			position: 1@1;
+			color: Color orange;
+			yourself).
+
+	c add: (
+		RSLabel new
+			model: 2;
+			text: 2 asString;
+			position: 5 asPoint;
+			color: Color blue;
+			yourself).
+
+	c nodes do: [ :each | each when: RSMouseClick send: #inspect to: each ].
+		
+	layout := RSBox2DLayout new.
+	layout
+		nodes: c nodes;
+		edges: #();
+		start.
+	
+	c newAnimation repeat onStepDo: [ :t |
+		layout step.
+		c zoomToFit ].
+
+	c addInteraction: RSCanvasController.
+	c nodes @ RSDraggable.
+	c nodes @ RSHighlightable defaultRed.
+
+	^c
+
 ]

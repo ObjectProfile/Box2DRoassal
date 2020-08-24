@@ -6,7 +6,8 @@ Class {
 	#superclass : #RSEdgeDrivenLayout,
 	#instVars : [
 		'world',
-		'nodes'
+		'nodes',
+		'deltaTime'
 	],
 	#category : #'Roassal3-Box2D-Layouts'
 }
@@ -14,6 +15,16 @@ Class {
 { #category : #accessing }
 RSBox2DLayout >> box2dBodyKey [
 	^ #box2dBodyKey
+]
+
+{ #category : #accessing }
+RSBox2DLayout >> deltaTime [
+	^ deltaTime
+]
+
+{ #category : #accessing }
+RSBox2DLayout >> deltaTime: anObject [
+	deltaTime := anObject
 ]
 
 { #category : #hook }
@@ -25,6 +36,13 @@ RSBox2DLayout >> doExecute: aCollection [
 ]
 
 { #category : #accessing }
+RSBox2DLayout >> fix: aRSShape [
+	| body |
+	body := aRSShape propertyAt: self box2dBodyKey.
+	body mass: Float fmax.
+]
+
+{ #category : #accessing }
 RSBox2DLayout >> jointAnchorFor: aRSLine [
 
 	^ 10@0
@@ -32,7 +50,7 @@ RSBox2DLayout >> jointAnchorFor: aRSLine [
 
 { #category : #accessing }
 RSBox2DLayout >> massFor: aRSShape [
-	^ 150.0
+	^ "aRSShape width * aRSShape height / 10" aRSShape extent r 
 ]
 
 { #category : #accessing }
@@ -48,13 +66,17 @@ RSBox2DLayout >> nodes: aCollection [
 { #category : #hook }
 RSBox2DLayout >> start [
 
+	deltaTime := 1.0 / 60.0.
+
 	world := B2World new.
-	world setGravity: 0.0 @ 0.0 iterations: 10.
+	world setGravity: 0.0 @ 0.0 iterations: 5.
 
 	nodes do: [ :each |
 		|newBody |
 		newBody := B2Body extent: each extent mass: (self massFor: each).
-		newBody position: each position.
+		newBody
+			position: each position;
+			friction: 0.25.
 		each propertyAt: self box2dBodyKey put: newBody.
 		world addBody: newBody ].
 
@@ -64,6 +86,7 @@ RSBox2DLayout >> start [
 		body2 := each to propertyAt: self box2dBodyKey.
 		newJoint := B2Joint body1: body1 body2: body2 anchor: (self jointAnchorFor: each).
 		newJoint softness: 0.25; biasFactor: 0.5.
+		each propertyAt: self box2dBodyKey put: newJoint.
 		world addJoint: newJoint ].
 
 ]
@@ -71,7 +94,7 @@ RSBox2DLayout >> start [
 { #category : #hook }
 RSBox2DLayout >> step [
 
-	world step: 1.0 / 60.0.
+	world step: deltaTime.
 
 	nodes do: [ :each |
 		| body |
@@ -79,6 +102,13 @@ RSBox2DLayout >> step [
 		body updateRSShape: each ].
 
 	
+]
+
+{ #category : #accessing }
+RSBox2DLayout >> unfix: aRSShape [
+	| body |
+	body := aRSShape propertyAt: self box2dBodyKey.
+	body mass: (self massFor: aRSShape).
 ]
 
 { #category : #accessing }
